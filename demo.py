@@ -2,7 +2,7 @@ import argparse
 import os 
 from network.two_stage_vae_model import *
 import numpy as np 
-import tensorflow as tf 
+import torch
 import math 
 import time 
 import matplotlib 
