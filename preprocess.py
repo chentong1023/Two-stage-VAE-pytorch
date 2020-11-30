@@ -8,7 +8,7 @@ ROOT_FOLDER = './data'
 
 
 def load_mnist_data(flag='training'):
-    mndata = MNIST(os.path.join(ROOT_FOLDER, 'mnist'))
+    mndata = MNIST(os.path.join(ROOT_FOLDER, 'mnist'), gz=True)
     try:
         if flag == 'training':
             images, labels = mndata.load_training()
