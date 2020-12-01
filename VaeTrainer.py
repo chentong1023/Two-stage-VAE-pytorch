@@ -3,6 +3,7 @@ import math
 import numpy as np
 import torch.optim as optim
 from collections import OrderedDict
+from model.losses import *
 
 class VaeTrainer(object):
 	def __init__(self, args, device, stage, cross_entropy_loss=False):
@@ -11,11 +12,12 @@ class VaeTrainer(object):
 		self.batch_sampler = batch_sampler
 		self.batch_enumerator = None
 		self.stage = stage
+		self.kld_loss = kl_loss
 		
-		if stage == 1:
-			self.kld_loss = 
+		if cross_entropy_loss or stage == 2:
+			self.gen_loss = gen_loss2
 		else:
-			
+			self.gen_loss = gen_loss1
 	
 	def sample_batch(self):
 		if self.batch_enumerator is None:

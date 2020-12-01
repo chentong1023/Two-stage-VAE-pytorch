@@ -42,23 +42,19 @@ def main():
     print('Num Sample = {}.'.format(num_sample))
 
     # model
-    model1 = eval(args.network_structure)(args)
-    
-    model2 = S2VAE(args)
+    encoder1 = 
+    decoder1 = 
 
 	trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
-	logs1 = trainer1.trainIters(model1)
+	logs1 = trainer1.trainIters(encoder1, decoder1)
 	
 	plot_loss(logs1, os.path.join(exp_folder, "loss_curve_1.png"), args.plot_every)
 	save_logfile(logs1, os.path.join(exp_folder, "log_stage_1.txt"))
     
     #####################################################
-    model1.eval()
-    output = model1(x)
-    mu_z = output['mu']
-    sd_z = output['sd']
-    z = mu_z + sd_z * np.random.normal(0, 1, [num_sample, args.latent_dim])
+    encoder1.eval()
+    mu_z, sd_z, logsd_z, z = encoder1(x)
     
     sampler_z = DataLoader(
 		z,
@@ -68,9 +64,12 @@ def main():
 		shuffle=True
 	)
     
+    encoder2 = 
+    decoder2 = 
+
     trainer2 = VaeTrainer(args, sampler_z, device, 2)
     
-    logs2 = trainer2.trainIter(model2)
+    logs2 = trainer2.trainIter(encoder2, decoder2)
 	
 	plot_loss(logs2, os.path.join(exp_folder, "loss_curve_2.png"), args.plot_every)
 	save_logfile(logs2, os.path.join(exp_folder, "log_stage_2.txt"))
