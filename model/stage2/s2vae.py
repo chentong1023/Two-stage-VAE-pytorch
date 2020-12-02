@@ -68,6 +68,7 @@ class S2Decoder(nn.Module):
 		
 		self.output = nn.Linear(input_size + hidden_size, output_size)
 		self.hidden = self.init_hidden()
+		self.loggamma = nn.parameter.Parameter(0)
 	
 	def init_hidden(self, num_samples=None):
         batch_size = num_samples if num_samples is not None else self.batch_size
@@ -89,4 +90,7 @@ class S2Decoder(nn.Module):
 			h_in = self.hidden[i]
 		h_in = torch.cat([inputs.view(-1, self.input_size), h_id], -1)
 		z_hat = self.output(h_in)
+		loggamma = self.loggamma
+		gamma = loggamma.exp_()
+		return z_hat, loggamma, gamma
 		
