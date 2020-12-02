@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader
 from VaeTrainer import VaeTrainer
 from utils.plot_script import plot_loss
 from utils.utils_ import save_logfile
+from model.stage1.GuassianVAE import *
+from model.stage2.s2vae import *
 
 
 def main():
@@ -42,8 +44,8 @@ def main():
     print('Num Sample = {}.'.format(num_sample))
 
     # model
-    encoder1 = 
-    decoder1 = 
+    encoder1 = InfoganEncoder()
+    decoder1 = InfoganDecoder()
 
 	trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
@@ -64,8 +66,8 @@ def main():
 		shuffle=True
 	)
     
-    encoder2 = 
-    decoder2 = 
+    encoder2 = S2Encoder(args.latent_dim, args.latent_dim, args.second_dim, args.second_depth, args.batch_size, device)
+    decoder2 = S2Decoder(args.latent_dim, args.latent_dim, args.second_dim, args.second_depth, args.batch_size, device)
 
     trainer2 = VaeTrainer(args, sampler_z, device, 2)
     
