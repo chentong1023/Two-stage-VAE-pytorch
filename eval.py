@@ -24,7 +24,8 @@ def main():
         os.makedirs(model_path)
 
     # model
-    
+    encoder1 = WaeEncoder()
+    decoder1 = WaeDecoder()
     
     # test dataset 
     x, side_length, channels = load_test_dataset(args.dataset, args.root_folder)
