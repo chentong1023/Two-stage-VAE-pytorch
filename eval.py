@@ -26,20 +26,39 @@ def main():
     # model
     encoder1 = WaeEncoder()
     decoder1 = WaeDecoder()
+    encoder1.eval()
+    decoder1.eval()
     
     # test dataset 
     x, side_length, channels = load_test_dataset(args.dataset, args.root_folder)
     np.random.shuffle(x)
     x = x[0:10000]
+    np.transpose(x, [0, 3, 1, 2])
 
     # reconstruction and generation
     def reconstruct(x):
         num_sample = np.shape(x)[0]
-        
+        mu_z, sd_z, logsd_z, z = encoder1(x)
+        x_hat, loggamma_x, gamma_x = decoder1(z)
+        return x_hat
+    
+    def generate(self, num_sample, stage=2):
+        if stage == 2:
+            u = np.random.normal(0, 1, [num_sample, self.latent_dim])
+            z_hat, loggamma_z, gamma_z = decoder2(u)
+            z = z_hat + gamma_z * np.random.normal(0, 1, [num_sample, self.latent_dim])
+        else:
+            z = np.random.normal(0, 1, [num_sample, self.latent_dim])
+        x_hat, _, _ = decoder1(z)
+        return x_hat
     
     img_recons = reconstruct(x)
     img_gens1 = generate(10000, 1)
     img_gens2 = generate(10000, 2)
+    
+    np.transpose(img_recons, [0, 3, 1, 2])
+    np.transpose(img_gens1, [0, 3, 1, 2])
+    np.transpose(img_gens2, [0, 3, 1, 2])
 
     img_recons_sample = stich_imgs(img_recons)
     img_gens1_sample = stich_imgs(img_gens1)

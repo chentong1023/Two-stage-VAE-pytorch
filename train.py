@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
+from model.stage1 import Wae
 from model.stage2.s2vae import *
-from model.stage1.GuassianVAE import *
 from utils.utils_ import save_logfile
 from utils.plot_script import plot_loss
 from VaeTrainer import VaeTrainer
@@ -30,7 +30,7 @@ def main():
     # dataset
     x, side_length, channels = load_dataset(args.dataset, args.root_folder)
     num_sample = np.shape(x)[0]
-    print(x.shape)
+    x = np.transpose(x, [0, 3, 1, 2])
 
     sampler_x = DataLoader(
         x,
@@ -46,12 +46,14 @@ def main():
     print('Num Sample = {}.'.format(num_sample))
 
     # model
-    encoder1 = InfoganEncoder()
-    decoder1 = InfoganDecoder()
+    encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
+    decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
 
     trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
     logs1 = trainer1.trainIters(encoder1, decoder1)
+    
+    print("Stage 1 VAE training has done!")
 
     plot_loss(logs1, os.path.join(
         exp_folder, "loss_curve_1.png"), args.plot_every)

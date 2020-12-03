@@ -28,6 +28,7 @@ def main():
     x, side_length, channels = load_dataset(args.dataset, args.root_folder)
     input_x = tf.placeholder(tf.uint8, [args.batch_size, side_length, side_length, channels], 'x')
     num_sample = np.shape(x)[0]
+    
     print('Num Sample = {}.'.format(num_sample))
 
     # model

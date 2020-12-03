@@ -199,6 +199,7 @@ class Wae(TwoStageVaeModel):
         with tf.variable_scope('encoder'):
             y = self.x 
 
+            # [batch_size, 28, 28, 1]
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 128, 5, 1, 'same'), self.is_training, 'bn1'))
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 256, 5, 2, 'same'), self.is_training, 'bn2'))
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 512, 5, 2, 'same'), self.is_training, 'bn3'))
