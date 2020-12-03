@@ -4,9 +4,10 @@ import numpy as np
 import torch.optim as optim
 from collections import OrderedDict
 from model.losses import *
+import time
 
 class VaeTrainer(object):
-	def __init__(self, args, device, stage, cross_entropy_loss=False):
+	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
 		self.args = args
 		self.device = device
 		self.batch_sampler = batch_sampler
@@ -62,16 +63,16 @@ class VaeTrainer(object):
 		
 		return log_dict
 	
-	def trainIter(self, encoder, decoder):
+	def trainIters(self, encoder, decoder):
 		self.opt_encoder = optim.Adam(
 			encoder.parameters(),
-			lr = args.lr,
+			lr = self.args.lr,
 			betas = (0.9, 0.999),
 			weight_decay = 0.00001,
 		)
 		self.opt_decoder = optim.Adam(
 			decoder.parameters(),
-			lr = args.lr,
+			lr = self.args.lr,
 			betas = (0.9, 0.999),
 			weight_decay = 0.00001,
 		)
