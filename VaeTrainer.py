@@ -1,13 +1,15 @@
 import torch
 import math
+import os
 import numpy as np
 import torch.optim as optim
 from collections import OrderedDict
 from model.losses import *
+from utils.utils_ import print_current_loss
 import time
 
 class VaeTrainer(object):
-	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
+	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=True):
 		self.args = args
 		self.device = device
 		self.batch_sampler = batch_sampler
@@ -57,7 +59,8 @@ class VaeTrainer(object):
 		avg_loss = losses.item()
 		
 		losses.backward()
-		optm.step()
+		opt_encoder.step()
+		opt_decoder.step()
 		
 		log_dict["g_loss"] = avg_loss
 		
@@ -94,7 +97,7 @@ class VaeTrainer(object):
 		
 		def load_model(file_name):
 			filename = "s" + str(self.stage) + "_" + file_name
-			model_dict = torch.load(os.path.join(self.args.model_path, file_name + ".tar"))
+			model_dict = torch.load(os.path.join(self.args.model_path, filename + ".tar"))
 			
 			encoder.load_state_dict(model_dict["encoder"])
 			decoder.load_state_dict(model_dict["decoder"])
@@ -131,13 +134,16 @@ class VaeTrainer(object):
 			if iter_num % self.args.print_every == 0:
 				mean_loss = OrderedDict()
 				for k, v in logs.items():
-					mean_loss[k]
+					mean_loss[k] = (
+						sum(logs[k][-1 * self.args.print_every:]) / self.args.print_every
+					)
+				print_current_loss(start_time, iter_num, self.args.epochs, mean_loss)
 			
 			if iter_num % self.args.save_every == 0:
 				save_model(str(iter_num))
 			
-			if iter_num % self.args.save_lastest == 0:
-				save_model("lastest")
+			if iter_num % self.args.save_latest == 0:
+				save_model("latest")
 			
 			if iter_num >= self.args.epochs:
 				break

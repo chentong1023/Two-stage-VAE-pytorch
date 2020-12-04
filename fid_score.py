@@ -1,12 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
-import os.path, sys, tarfile
+import os.path
+import sys
+import tarfile
 import numpy as np
 from scipy import linalg
 from six.moves import range, urllib
 import numpy as np
 import os
-import gzip, pickle
+import gzip
+import pickle
 from scipy.misc import imread
 import urllib
 
@@ -24,8 +27,9 @@ import matplotlib.pyplot as plt
 # =================================================================================
 # pytorch fid score
 
+
 def get_activations_pt(images, model, batch_size=64, dims=2048,
-                    cuda=False, verbose=False):
+                       cuda=False, verbose=False):
     """Calculates the activations of the pool_3 layer for all images.
     Params:
     -- images      : Numpy array of dimension (n_images, 3, hi, wi). The values
@@ -66,6 +70,8 @@ def get_activations_pt(images, model, batch_size=64, dims=2048,
         batch = Variable(batch, volatile=True)
         if cuda:
             batch = batch.cuda()
+        
+        print(batch.shape)
 
         pred = model(batch)[0]
 
@@ -85,7 +91,7 @@ def get_activations_pt(images, model, batch_size=64, dims=2048,
 def fid_score(codes_g, codes_r, eps=1e-6):
     d = codes_g.shape[1]
     assert codes_r.shape[1] == d
-    
+
     mn_g = codes_g.mean(axis=0)
     mn_r = codes_r.mean(axis=0)
 
@@ -95,30 +101,34 @@ def fid_score(codes_g, codes_r, eps=1e-6):
     covmean, _ = linalg.sqrtm(cov_g.dot(cov_r), disp=False)
     if not np.isfinite(covmean).all():
         cov_g[range(d), range(d)] += eps
-        cov_r[range(d), range(d)] += eps 
+        cov_r[range(d), range(d)] += eps
         covmean = linalg.sqrtm(cov_g.dot(cov_r))
 
-    score = np.sum((mn_g - mn_r) ** 2) + (np.trace(cov_g) + np.trace(cov_r) - 2 * np.trace(covmean))
-    return score 
+    score = np.sum((mn_g - mn_r) ** 2) + (np.trace(cov_g) +
+                                          np.trace(cov_r) - 2 * np.trace(covmean))
+    return score
 
 
 def preprocess_fake_images(fake_images, norm=False):
     if np.shape(fake_images)[-1] == 1:
-        fake_images = np.concatenate([fake_images, fake_images, fake_images], -1) 
+        fake_images = np.concatenate(
+            [fake_images, fake_images, fake_images], -1)
 
     print('norm = ', norm)
     if norm:
         for j in range(np.shape(fake_images)[0]):
-            fake_images[j] = (fake_images[j] - np.min(fake_images[j])) / (np.max(fake_images[j] - np.min(fake_images[j])))
-    fake_images *= 255
+            fake_images[j] = (fake_images[j] - np.min(fake_images[j])) / \
+                (np.max(fake_images[j] - np.min(fake_images[j])))
     return fake_images[0:10000]
 
 
 def preprocess_real_images(real_images):
     if np.shape(real_images)[-1] == 1:
-        real_images = np.concatenate([real_images, real_images, real_images], -1) 
-    real_images = real_images.astype(np.float32)
+        real_images = np.concatenate(
+            [real_images, real_images, real_images], -1)
+    real_images = real_images.astype(np.float32) / 255.
     return real_images
+
 
 def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     real_images, _, _ = load_test_dataset(dataset, root_folder)
@@ -126,12 +136,15 @@ def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     real_images = real_images[0:10000]
     real_images = preprocess_real_images(real_images)
     fake_images = preprocess_fake_images(fake_images, norm)
+    real_images = np.transpose(real_images, [0, 3, 1, 2])
+    fake_images = np.transpose(fake_images, [0, 3, 1, 2])
 
-	############################################
-	# TODO: download and check inception model #
-	############################################
-	inception_model = inception_v3(pretrained=True, transform_input=False).type(dtype)
-	############################################
+    ############################################
+    # TODO: download and check inception model #
+    ############################################
+    inception_model = torch.hub.load('pytorch/vision:v0.6.0', 'inception_v3', pretrained=True)
+    inception_model.eval()
+    ############################################
 
     print('calculating pt features...')
     real_out = get_activations_pt(real_images, inception_model)

@@ -8,16 +8,20 @@ class WaeEncoder(nn.Module):
         self.latent_dim = latent_dim
         self.channel = channel
         self.side_length = side_length
-        self.cn1 = nn.Conv2d(self.channel, self.channel * 128, 5, 1, 2)
-        self.cn2 = nn.Conv2d(self.channel * 128, self.channel * 256, 5, 2, 2)
-        self.cn3 = nn.Conv2d(self.channel * 256, self.channel * 512, 5, 2, 2)
-        self.cn4 = nn.Conv2d(self.channel * 512, self.channel * 1024, 5, 2, 2)
-        self.bn1 = nn.BatchNorm2d(self.channel * 128)
-        self.bn2 = nn.BatchNorm2d(self.channel * 256)
-        self.bn3 = nn.BatchNorm2d(self.channel * 512)
-        self.bn4 = nn.BatchNorm2d(self.channel * 1024)
-        self.relu = nn.ReLU()
-        self.conv_size = self.channel * 1024 * 4 * 4
+        self.main = nn.Sequential(
+            nn.Conv2d(self.channel, self.side_length, 4, 2, 1, bias=False),
+            nn.ReLU(True),
+            nn.Conv2d(self.side_length, self.side_length * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.side_length * 2),
+            nn.ReLU(True),
+            nn.Conv2d(self.side_length * 2, self.side_length * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.side_length * 4),
+            nn.ReLU(True),
+            nn.Conv2d(self.side_length * 4, self.side_length * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(self.side_length * 8),
+            nn.ReLU(True),
+        )
+        self.conv_size = self.side_length * 8
         self.mu_net = nn.Linear(self.conv_size, self.latent_dim)
         self.logvar_net = nn.Linear(self.conv_size, self.latent_dim)
 
@@ -27,13 +31,8 @@ class WaeEncoder(nn.Module):
         return eps.mul(s_var).add_(mu), s_var
 
     def forward(self, inputs):
-        y = inputs
-        y = self.relu(self.bn1(self.cn1(y)))
-        y = self.relu(self.bn2(self.cn2(y)))
-        y = self.relu(self.bn3(self.cn3(y)))
-        y = self.relu(self.bn4(self.cn4(y)))
-
-        y = y.view(y.size()[0], -1)
+        y = self.main(inputs)
+        y = y.squeeze()
 
         mu = self.mu_net(y)
         logvar = self.logvar_net(y)
@@ -47,31 +46,29 @@ class WaeDecoder(nn.Module):
         self.latent_dim = latent_dim
         self.channel = channel
         self.side_length = side_length
-        self.fc = nn.Linear(self.latent_dim, 8 * 8 * 1024)
-        self.bn1 = nn.ConvTranspose2d(self.channel * 1024, self.channel * 512, 5, 2)
-        self.bn2 = nn.ConvTranspose2d(self.channel * 512, self.channel * 256, 5, 2)
-        self.bn3 = nn.ConvTranspose2d(self.channel * 256, self.channel * 128, 5, 2)
-        self.bn4 = nn.ConvTranspose2d(self.channel * 128, self.channel, 5, 1)
-        self.relu = nn.ReLU()
-        self.sigmoid = nn.Sigmoid()
+
+        self.proj = nn.Sequential(
+            nn.Linear(self.latent_dim, self.side_length * 8 * 7 * 7),
+            nn.ReLU()
+        )
+
+        self.main = nn.Sequential(
+            nn.ConvTranspose2d(self.side_length * 8, self.side_length * 4, 4),
+            nn.BatchNorm2d(self.side_length * 4),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.side_length * 4, self.side_length * 2, 4),
+            nn.BatchNorm2d(self.side_length * 2),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(self.side_length * 2, 1, 4, stride=2),
+            nn.Sigmoid()
+        )
         self.loggamma = nn.parameter.Parameter(torch.tensor(0.), requires_grad=True)
 
     def forward(self, inputs):
-        y = inputs
-        y = self.relu(self.fc(y))
-        print(y.shape)
-        y = y.reshape([-1, 1024, 8, 8])
-        y = self.relu(self.bn1(y))
-        print(y.shape)
-        y = self.relu(self.bn2(y))
-        print(y.shape)
-        y = self.relu(self.bn3(y))
-        print(y.shape)
-        y = self.bn4(y)
-        print(y.shape)
-
-        x_hat = self.sigmoid(y)
+        y = self.proj(inputs)
+        y = y.view(-1, self.side_length * 8, 7, 7)
+        x_hat = self.main(y)
         loggamma_x = self.loggamma
-        gamma_x = loggamma_x.exp_()
+        gamma_x = torch.exp(loggamma_x)
 
         return x_hat, loggamma_x, gamma_x
