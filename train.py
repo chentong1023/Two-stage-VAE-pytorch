@@ -30,7 +30,7 @@ def main():
     # dataset
     x, side_length, channels = load_dataset(args.dataset, args.root_folder)
     num_sample = np.shape(x)[0]
-    x = np.transpose(x, [0, 3, 1, 2])
+    x = np.transpose(x, [0, 3, 1, 2]) / 255.
 
     sampler_x = DataLoader(
         x,
@@ -61,10 +61,14 @@ def main():
 
     #####################################################
     encoder1.eval()
-    mu_z, sd_z, logsd_z, z = encoder1(x)
+    x_tensor = torch.from_numpy(x).type(torch.float32).to(device)
+    print(type(x_tensor))
+    mu_z, sd_z, logsd_z, z = encoder1(x_tensor)
+    
+    z_d = torch.tensor(z, requires_grad=False).cpu()
 
     sampler_z = DataLoader(
-        z,
+        z_d,
         batch_size=args.batch_size,
         drop_last=True,
         num_workers=2,
@@ -72,13 +76,13 @@ def main():
     )
 
     encoder2 = S2Encoder(args.latent_dim, args.latent_dim,
-                         args.second_dim, args.second_depth, args.batch_size, device)
+                         args.second_dim, args.second_depth, args.batch_size)
     decoder2 = S2Decoder(args.latent_dim, args.latent_dim,
-                         args.second_dim, args.second_depth, args.batch_size, device)
+                         args.second_dim, args.second_depth, args.batch_size)
 
     trainer2 = VaeTrainer(args, sampler_z, device, 2)
 
-    logs2 = trainer2.trainIter(encoder2, decoder2)
+    logs2 = trainer2.trainIters(encoder2, decoder2)
 
     plot_loss(logs2, os.path.join(
         exp_folder, "loss_curve_2.png"), args.plot_every)
