@@ -9,24 +9,38 @@ from utils.utils_ import print_current_loss
 import time
 
 class VaeTrainer(object):
-	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=True):
+	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False, vae_encoder=None):
 		self.args = args
 		self.device = device
 		self.batch_sampler = batch_sampler
 		self.batch_enumerator = None
 		self.stage = stage
 		self.kld_loss = kl_loss
+  
+		self.vae_encoder = vae_encoder
 		
-		if cross_entropy_loss or stage == 2:
+		if not cross_entropy_loss or stage == 2:
 			self.gen_loss = gen_loss2
 		else:
 			self.gen_loss = gen_loss1
 	
-	def sample_batch(self):
+	def sample_batch1(self):
 		if self.batch_enumerator is None:
 			self.batch_enumerator = enumerate(self.batch_sampler)
 		
 		batch_idx, batch = next(self.batch_enumerator)
+		
+		if batch_idx == len(self.batch_sampler) - 1:
+			self.batch_enumerator = enumerate(self.batch_sampler)
+		# self.real_batch = batch # ?? have not used
+		return batch
+	def sample_batch2(self):
+		if self.batch_enumerator is None:
+			self.batch_enumerator = enumerate(self.batch_sampler)
+		
+		batch_idx, batch = next(self.batch_enumerator)
+		batch = batch.type(torch.float32).to(self.device)
+		_, _, _, batch = self.vae_encoder(batch)
 		
 		if batch_idx == len(self.batch_sampler) - 1:
 			self.batch_enumerator = enumerate(self.batch_sampler)
@@ -48,13 +62,13 @@ class VaeTrainer(object):
 		mu_z, sd_z, logsd_z, z = encoder(data)
 		x_hat, loggamma_x, gamma_x = decoder(z)
 		
-		kld_loss += self.kld_loss(mu_z, sd_z, logsd_z)
-		gen_loss += self.gen_loss(data, x_hat, gamma_x, loggamma_x)
+		kld_loss += self.kld_loss(mu_z, logsd_z)
+		gen_loss += self.gen_loss(data, x_hat, loggamma_x)
 		
 		log_dict["g_kld_loss"] = kld_loss.item()
 		log_dict["g_gen_loss"] = gen_loss.item()
 		
-		losses = (kld_loss + gen_loss)
+		losses = (kld_loss + gen_loss) / self.args.batch_size
 		
 		avg_loss = losses.item()
 		
@@ -115,12 +129,16 @@ class VaeTrainer(object):
 			encoder.train()
 			decoder.train()
 			
+			if self.stage == 1:
+				sample_true = self.sample_batch1
+			else:
+				sample_true = self.sample_batch2
 			gen_log_dict = self.train(
 				encoder,
 				decoder,
 				self.opt_encoder,
 				self.opt_decoder,
-				self.sample_batch,
+				sample_true,
 			)
 			
 			for k, v in gen_log_dict.items():
