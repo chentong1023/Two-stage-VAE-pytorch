@@ -8,6 +8,7 @@ from scipy.misc import imsave, imresize
 import argparse
 import os
 import numpy as np
+import tensorflow as tf 
 import torch
 import math
 import time
@@ -33,9 +34,8 @@ def main():
     x, side_length, channels = load_test_dataset(
         args.dataset, args.root_folder)
     np.random.shuffle(x)
-    x = x[0:10000]
+    x = x[0:10000] / 255.
     x = np.transpose(x, [0, 3, 1, 2])
-    x = torch.from_numpy(x).type(torch.float32).to(device)
     # model
     encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
     decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
@@ -43,7 +43,7 @@ def main():
     decoder1.eval()
     encoder1.to(device)
     decoder1.to(device)
-
+    
     encoder2 = S2Encoder(args.latent_dim, args.latent_dim,
                          args.second_dim, args.second_depth, args.batch_size)
     decoder2 = S2Decoder(args.latent_dim, args.latent_dim,
@@ -67,28 +67,44 @@ def main():
     # reconstruction and generation
     def reconstruct(x):
         num_sample = np.shape(x)[0]
-        mu_z, sd_z, logsd_z, z = encoder1(x)
-        x_hat, loggamma_x, gamma_x = decoder1(z)
-        return x_hat
+        num_iter = math.ceil(float(num_sample) / float(args.batch_size))
+        x_extend = np.concatenate([x, x[0:args.batch_size]], 0)
+        recon_x = []
+        for i in range(num_iter):
+            batch = torch.from_numpy(x_extend[i*args.batch_size:(i+1)*args.batch_size]).type(torch.float32).to(device)
+            mu_z, sd_z, logsd_z, z = encoder1(batch)
+            x_hat, loggamma_x, gamma_x = decoder1(z)
+            recon_x.append(x_hat.cpu().detach().numpy())
+        recon_x = np.concatenate(recon_x, 0)[0:num_sample]
+        return recon_x
 
     def generate(num_sample, stage=2):
-        if stage == 2:
-            u = torch.randn([num_sample, args.latent_dim]).to(device)
-            z_hat, loggamma_z, gamma_z = decoder2(u)
-            z = z_hat + gamma_z * \
-                torch.randn([num_sample, args.latent_dim]).to(device)
-        else:
-            z = torch.randn([num_sample, args.latent_dim]).to(device)
-        x_hat, _, _ = decoder1(z)
-        return x_hat
+        num_iter = math.ceil(float(num_sample) / float(args.batch_size))
+        gen_samples = []
+        for i in range(num_iter):
+            if stage == 2:
+                # u ~ N(0, I)
+                u = torch.randn([args.batch_size, args.latent_dim]).to(device)
+                # z ~ N(f_2(u), \gamma_z I)
+                z_hat, loggamma_z, gamma_z = decoder2(u)
+                z = z_hat + gamma_z * torch.randn([args.batch_size, args.latent_dim]).to(device)
+            else:
+                z = torch.randn([args.batch_size, args.latent_dim]).to(device)
+            # x = f_1(z)
+            x_hat, _, _ = decoder1(z)
+            gen_samples.append(x_hat.cpu().detach().numpy())
+        gen_samples = np.concatenate(gen_samples, 0)
+        return gen_samples[0:num_sample]
 
-    img_recons = reconstruct(x).detach().cpu().numpy()
-    img_gens1 = generate(10000, 1).detach().cpu().numpy()
-    img_gens2 = generate(10000, 2).detach().cpu().numpy()
+    img_recons = reconstruct(x)
+    img_gens1 = generate(10000, 1)
+    img_gens2 = generate(10000, 2)
 
     img_recons = np.transpose(img_recons, [0, 2, 3, 1])
     img_gens1 = np.transpose(img_gens1, [0, 2, 3, 1])
     img_gens2 = np.transpose(img_gens2, [0, 2, 3, 1])
+    
+    
 
     img_recons_sample = stich_imgs(img_recons)
     img_gens1_sample = stich_imgs(img_gens1)
@@ -161,5 +177,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
+    
+    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
+    print(gpus)
+    tf.config.experimental.set_virtual_device_configuration(
+        gpus[args.gpu],
+        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=2048)]
+    )
 
     main()

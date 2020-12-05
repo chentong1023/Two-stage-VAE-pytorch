@@ -61,26 +61,13 @@ def main():
 
     #####################################################
     encoder1.eval()
-    x_tensor = torch.from_numpy(x).type(torch.float32).to(device)
-    print(type(x_tensor))
-    mu_z, sd_z, logsd_z, z = encoder1(x_tensor)
-    
-    z_d = torch.tensor(z, requires_grad=False).cpu()
-
-    sampler_z = DataLoader(
-        z_d,
-        batch_size=args.batch_size,
-        drop_last=True,
-        num_workers=2,
-        shuffle=True
-    )
-
+    encoder1.to(device)
     encoder2 = S2Encoder(args.latent_dim, args.latent_dim,
                          args.second_dim, args.second_depth, args.batch_size)
     decoder2 = S2Decoder(args.latent_dim, args.latent_dim,
                          args.second_dim, args.second_depth, args.batch_size)
 
-    trainer2 = VaeTrainer(args, sampler_z, device, 2)
+    trainer2 = VaeTrainer(args, sampler_x, device, 2, True, encoder1)
 
     logs2 = trainer2.trainIters(encoder2, decoder2)
 
@@ -114,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--fc-dim', type=int, default=512)
 
     parser.add_argument('--epochs', type=int, default=400)
-    parser.add_argument('--lr', type=float, default=0.0001)
+    parser.add_argument('--lr', type=float, default=0.0002)
     parser.add_argument('--lr-epochs', type=int, default=150)
     parser.add_argument('--lr-fac', type=float, default=0.5)
 
