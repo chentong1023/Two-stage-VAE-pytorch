@@ -2,7 +2,7 @@ import argparse
 import os 
 from network.two_stage_vae_model import *
 import numpy as np 
-import torch
+import tensorflow as tf 
 import math 
 import time 
 import matplotlib 
@@ -45,10 +45,12 @@ def main():
     if not args.val:
         # first stage
         for epoch in range(args.epochs):
+            print('epoch: {}/{}'.format(epoch, args.epochs))
             np.random.shuffle(x)
             lr = args.lr if args.lr_epochs <= 0 else args.lr * math.pow(args.lr_fac, math.floor(float(epoch) / float(args.lr_epochs)))
             epoch_loss = 0
             for j in range(iteration_per_epoch):
+                print('{}/{}'.format(j, iteration_per_epoch))
                 image_batch = x[j*args.batch_size:(j+1)*args.batch_size]
                 loss = model.step(1, image_batch, lr, sess, writer, args.write_iteration)
                 epoch_loss += loss 

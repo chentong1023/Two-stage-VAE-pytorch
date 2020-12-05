@@ -2,3 +2,5 @@ data/
 experiments/
 .vscode/
 */__pycache__
+__pycache__
+classify_image_graph_def.pb

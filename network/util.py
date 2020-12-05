@@ -1,6 +1,8 @@
+import tensorflow as tf 
+from tensorflow.contrib import layers 
 import math 
-import torch
 import numpy as np 
+from tensorflow.python.training.moving_averages import assign_moving_average
 
 
 def spectral_norm(input_):

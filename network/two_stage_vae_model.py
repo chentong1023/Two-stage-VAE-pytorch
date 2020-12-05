@@ -198,12 +198,21 @@ class Wae(TwoStageVaeModel):
     def build_encoder1(self):
         with tf.variable_scope('encoder'):
             y = self.x 
-
+            print("aa")
+            print(y.shape)
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 128, 5, 1, 'same'), self.is_training, 'bn1'))
+            print("bb")
+            print(y.shape)
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 256, 5, 2, 'same'), self.is_training, 'bn2'))
+            print("cc")
+            print(y.shape)
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 512, 5, 2, 'same'), self.is_training, 'bn3'))
+            print("dd")
+            print(y.shape)
             y = tf.nn.relu(batch_norm(tf.layers.conv2d(y, 1024, 5, 2, 'same'), self.is_training, 'bn4'))
-
+            print("ee")
+            print(y.shape)
+            
             y = tf.layers.flatten(y)
             self.mu_z = tf.layers.dense(y, self.latent_dim)
             self.logsd_z = tf.layers.dense(y, self.latent_dim)
