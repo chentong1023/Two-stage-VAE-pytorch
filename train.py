@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from model.stage1 import Wae
+from model.stage1 import Resnet
 from model.stage2.s2vae import *
 from utils.utils_ import save_logfile
 from utils.plot_script import plot_loss
@@ -32,6 +33,8 @@ def main():
     num_sample = np.shape(x)[0]
     x = np.transpose(x, [0, 3, 1, 2]) / 255.
 
+    print('Num Sample = {}.'.format(num_sample))
+
     sampler_x = DataLoader(
         x,
         batch_size=args.batch_size,
@@ -43,11 +46,13 @@ def main():
         "cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu"
     )
 
-    print('Num Sample = {}.'.format(num_sample))
-
     # model
-    encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
-    decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
+    if args.network_structure == 'Resnet':
+        encoder1 = Resnet.ResnetEncoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
+        # decoder1 = Resnet.ResnetDecoder()
+    else:
+        encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
+        decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
 
     trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
@@ -63,9 +68,9 @@ def main():
     encoder1.eval()
     encoder1.to(device)
     encoder2 = S2Encoder(args.latent_dim, args.latent_dim,
-                         args.second_dim, args.second_depth, args.batch_size)
+                        args.second_dim, args.second_depth, args.batch_size)
     decoder2 = S2Decoder(args.latent_dim, args.latent_dim,
-                         args.second_dim, args.second_depth, args.batch_size)
+                        args.second_dim, args.second_depth, args.batch_size)
 
     trainer2 = VaeTrainer(args, sampler_x, device, 2, True, encoder1)
 
