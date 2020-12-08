@@ -242,6 +242,7 @@ class Resnet(TwoStageVaeModel):
     def build_encoder1(self):
         with tf.variable_scope('encoder'):
             dim = self.base_dim
+            # default dataset: self.x.shape (64, 28, 28, 1)
             y = tf.layers.conv2d(self.x, dim, self.kernel_size, 1, 'same', name='conv0')
             for i in range(self.num_scale):
                 y = scale_block(y, dim, self.is_training, 'scale'+str(i), self.block_per_scale, self.depth_per_block, self.kernel_size)
