@@ -16,7 +16,7 @@ def cal_padding(x, kernel_size, stride=1):
     else:
         s[0] = s[1] = stride
     n = x.shape[-2:]
-    return (((-n) % s - 1) * s + m + 1) // 2
+    return [(((-n[i]) % s[i] - 1) * s[i] + m[i] + 1) // 2 for i in range(2)]
 
 
 class ResBlock(nn.Module):
@@ -35,7 +35,7 @@ class ResBlock(nn.Module):
             self.conv2ds.append(nn.Conv2d(input_channel, input_channel, kernel_size, padding=cal_padding(x, kernel_size)))
         self.s = nn.Conv2d(input_channel, out_dim, kernel_size, padding=(x, kernel_size))
 
-    def foward(self, x):
+    def forward(self, x):
         y = x
         for i in range(self.depth):
             y = self.batch_norms[i](y)
@@ -72,7 +72,21 @@ class DownSample(nn.Module):
         assert(len(x.shape) == 4)
         self.layer = nn.Conv2d(x.shape[1], out_dim, kernel_size, 2, cal_padding(x, kernel_size, 2))
 
-    def foward(self, x):
+    def forward(self, x):
+        return self.layer(x)
+
+    def string(self):
+        return self.name
+
+
+class UpSample(nn.Module):
+    def __init__(self, x, out_dim, kernel_size, name):
+        self.name = name
+        assert(len(x.shape) == 4)
+        self.layer = nn.ConvTranspose2d(x.shape[1], out_dim, kernel_size, 2, cal_padding(x, kernel_size, 2))
+        # The padding here may not be correct.
+
+    def forward(self, x):
         return self.layer(x)
 
     def string(self):
@@ -89,7 +103,7 @@ class ResFcBlock(nn.Module):
             self.layers.append(nn.Linear(x.shape[-1], out_dim))
         self.shortcut = nn.Linear(x.shape[-1], out_dim)
     
-    def foward(self, x):
+    def forward(self, x):
         y = x
         for i in range(self.depth):
             y = self.layers[i](y)
@@ -109,7 +123,7 @@ class ScaleFcBlock(nn.Module):
             self.layers.append(x)
             x = temp(x)
     
-    def foward(self, x):
+    def forward(self, x):
         y = x
         for i in range(self.block_per_scale):
             y = self.layers[i](y)
