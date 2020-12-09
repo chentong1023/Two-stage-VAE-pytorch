@@ -49,7 +49,7 @@ def main():
     # model
     if args.network_structure == 'Resnet':
         encoder1 = Resnet.ResnetEncoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
-        # decoder1 = Resnet.ResnetDecoder()
+        decoder1 = Resnet.ResnetDecoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
     else:
         encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
