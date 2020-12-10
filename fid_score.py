@@ -130,7 +130,7 @@ def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
 	############################################
 	# TODO: download and check inception model #
 	############################################
-	inception_model = inception_v3(pretrained=True, transform_input=False).type(dtype)
+    inception_model = inception_v3(pretrained=True, transform_input=False).type(dtype)
 	############################################
 
     print('calculating pt features...')

@@ -15,6 +15,7 @@ from dataset import load_dataset, load_test_dataset
 
 
 def main():
+    tf.disable_eager_execution()
     tf.reset_default_graph()
     # exp info
     exp_folder = os.path.join(args.output_path, args.dataset, args.exp_name)

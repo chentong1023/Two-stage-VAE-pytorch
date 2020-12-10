@@ -1,7 +1,8 @@
 import math 
 import torch
-import numpy as np 
-
+import numpy as np
+import tensorflow.compat.v1 as tf
+from tensorflow.python.training.moving_averages import assign_moving_average
 
 def spectral_norm(input_):
     """Performs Spectral Normalization on a weight tensor."""
