@@ -7,10 +7,8 @@
 #    return tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
 # 
 def n_deconv2d(input__,o_shape, k_h, k_w, d_h, d_w, stddev=0.02, name="deconv2d"):
-        print(input__.shape)
         output_shape=[o_shape[0],o_shape[3],o_shape[1],o_shape[2]]
         input_=input__.permute(0,3,1,2)
-        print(input_.shape)
         array = input_.numpy()
         input_siz=array.shape[2]
         padding=(k_h-1) // 2
