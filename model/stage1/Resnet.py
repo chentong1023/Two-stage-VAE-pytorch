@@ -58,16 +58,12 @@ class ResnetEncoder(nn.Module):
                 y = self.layers[j](y)
                 j += 1
 
-        print("y:{}".format(y.shape))
         y = torch.mean(y, [2, 3])
         y = self.fc(y)
 
         mu_z = self.mu_z_layer(y)
         logsd_z = self.logsd_z_layer(y)
         sd_z = torch.exp(logsd_z)
-        print("mu_z:{}".format(mu_z.shape))
-        print("sd_z:{}".format(sd_z.shape))
-        print([inputs.shape[0], self.latent_dim])
         z = mu_z + torch.randn([inputs.shape[0], self.latent_dim], device=self.device) * sd_z
 
         return mu_z, sd_z, logsd_z, z
@@ -97,6 +93,7 @@ class ResnetDecoder(nn.Module):
         
         assert(self.scales[-1] == desired_scale)
         dims = list(reversed(dims))
+        self.dims = dims
 
         y_shape = torch.zeros([1, self.latent_dim]).shape
         data_depth = input_shape[1]
@@ -123,7 +120,10 @@ class ResnetDecoder(nn.Module):
 
     def forward(self, x):
         y = x
-        for i in range(len(self.scales)):
+        y = self.fc0(y)
+        y = y.reshape([-1, self.dims[0], 2, 2])
+
+        for i in range(len(self.scales) - 1):
             y = self.upsamples[i](y)
             y = self.scaleblocks[i](y)
         

@@ -20,6 +20,23 @@ def cal_padding(input_shape, kernel_size, stride=1):
     n = input_shape[-2:]
     return [(((-n[i]) % s[i] - 1) * s[i] + m[i] + 1) // 2 for i in range(2)]
 
+def cal_pad_trans(input_shape, kernel_size, output_shape, stride):
+    # This is not a strict formula.
+    k = []
+    s = []
+    if isinstance(kernel_size, Iterable):
+        k = kernel_size
+    else:
+        k.append(kernel_size)
+        k.append(kernel_size)
+    if isinstance(stride, Iterable):
+        s = stride
+    else:
+        s.append(stride)
+        s.append(stride)
+    i = input_shape[-2:]
+    o = output_shape[-2:]
+    return [(s[j] * (i[j] - 1) + k[j] - o[j] + 1) // 2 for j in range(2)]
 
 class ResBlock(nn.Module):
     def __init__(self, input_shape, out_dim, name, depth=2, kernel_size=3):
@@ -94,11 +111,11 @@ class UpSample(nn.Module):
         super(UpSample, self).__init__()
         self.name = name
         assert(len(input_shape) == 4)
-        self.layer = nn.ConvTranspose2d(input_shape[1], out_dim, kernel_size, 2, cal_padding(input_shape, kernel_size, 2))
+        self.layer = nn.ConvTranspose2d(input_shape[1], out_dim, kernel_size, 2, cal_pad_trans(input_shape, kernel_size, [input_shape[0], out_dim, input_shape[2] * 2, input_shape[3] * 2], 2))
         # The padding here may not be correct.
 
     def forward(self, x):
-        return self.layer(x)
+        return self.layer(x, output_size=[x.shape[2] * 2, x.shape[3] * 2])
 
     def string(self):
         return self.name
