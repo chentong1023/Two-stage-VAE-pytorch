@@ -1,3 +1,5 @@
+import torch
+
 # Original deconv2d:
 #def deconv2d(input_, output_shape, k_h, k_w, d_h, d_w, stddev=0.02, name="deconv2d"):
 #    with tf.variable_scope(name):
