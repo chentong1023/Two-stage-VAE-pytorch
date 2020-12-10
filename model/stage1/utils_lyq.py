@@ -13,7 +13,7 @@ def n_deconv2d(input__,o_shape, k_h, k_w, d_h, d_w, stddev=0.02, name="deconv2d"
         input_siz=array.shape[2]
         padding=(k_h-1) // 2
         output_padding=d_h-1
-        calc_deconv = pt.nn.ConvTranspose2d(
+        calc_deconv = torch.nn.ConvTranspose2d(
             input_.shape[1],output_shape[1],
             kernel_size=[k_h, k_w],
             stride=[d_h,d_w],
