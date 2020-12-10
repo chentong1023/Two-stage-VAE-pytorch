@@ -45,11 +45,12 @@ def main():
     device = torch.device(
         "cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu"
     )
+    print(device)
 
     # model
     if args.network_structure == 'Resnet':
-        encoder1 = Resnet.ResnetEncoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
-        decoder1 = Resnet.ResnetDecoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
+        encoder1 = Resnet.ResnetEncoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss, device)
+        decoder1 = Resnet.ResnetDecoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss, device)
     else:
         encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
