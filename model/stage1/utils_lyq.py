@@ -5,7 +5,12 @@
 #        deconv = tf.nn.conv2d_transpose(input_, w, output_shape=output_shape, strides=[1, d_h, d_w, 1])
 #        biases = tf.get_variable("biases", [output_shape[-1]], initializer=tf.constant_initializer(0.0))
 #    return tf.reshape(tf.nn.bias_add(deconv, biases), deconv.get_shape())
-def n_deconv2d(input_,output_shape, k_h, k_w, d_h, d_w, stddev=0.02, name="deconv2d"):
+# 
+def n_deconv2d(input__,o_shape, k_h, k_w, d_h, d_w, stddev=0.02, name="deconv2d"):
+        print(input__.shape)
+        output_shape=[o_shape[0],o_shape[3],o_shape[1],o_shape[2]]
+        input_=input__.permute(0,3,1,2)
+        print(input_.shape)
         array = input_.numpy()
         input_siz=array.shape[2]
         padding=(k_h-1) // 2
