@@ -40,8 +40,8 @@ def main():
     x = np.transpose(x, [0, 3, 1, 2])
     # model
     if args.network_structure == 'Resnet':
-        encoder1 = Resnet.ResnetEncoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
-        decoder1 = Resnet.ResnetDecoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
+        encoder1 = Resnet.ResnetEncoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
+        decoder1 = Resnet.ResnetDecoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
     elif args.network_structure == 'Infogan':
         encoder1 = InfoGAN.InfoGANEncoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
         decoder1 = InfoGAN.InfoGANDecoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
@@ -126,6 +126,8 @@ def main():
     plt.imsave(os.path.join(exp_folder, 'gen2_sample.jpg'), img_gens2_sample)
 
     # calculating FID score
+    fid_score_log = 
+    
     fid_recon = evaluate_fid_score(
         img_recons.copy(), args.dataset, args.root_folder, True)
     fid_gen1 = evaluate_fid_score(
@@ -138,6 +140,8 @@ def main():
     print('FID = {:.4f}\n'.format(fid_gen1))
     print('Generation Results (Second Stage):')
     print('FID = {:.4f}\n'.format(fid_gen2))
+    
+    with open()
 
 
 def stich_imgs(x, img_per_row=10, img_per_col=10):
@@ -186,6 +190,8 @@ if __name__ == '__main__':
     parser.add_argument('--kernel-size', type=int, default=3)
     parser.add_argument('--base-dim', type=int, default=16)
     parser.add_argument('--fc-dim', type=int, default=512)
+    parser.add_argument('--cross-entropy-loss',
+                        default=False, action='store_true')
 
     args = parser.parse_args()
     print(args)
