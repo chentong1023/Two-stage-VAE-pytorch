@@ -46,6 +46,7 @@ def main():
     device = torch.device(
         "cuda:" + str(args.gpu) if torch.cuda.is_available() else "cpu"
     )
+    print(device)
 
     # model
     if args.network_structure == 'Resnet':
