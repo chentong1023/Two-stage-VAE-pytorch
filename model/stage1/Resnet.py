@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model.stage1.utils_yy import *
+from model.stage1.utils import *
 
 
 class ResnetEncoder(nn.Module):
