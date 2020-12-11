@@ -59,7 +59,7 @@ def main():
         encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
     else:
-        raise "Fuck"
+        raise Exception("Fuck")
 
     trainer1 = VaeTrainer(args, sampler_x, device, 1)
 

@@ -6,18 +6,14 @@ from model.stage1.utils import *
 
 
 class ResnetEncoder(nn.Module):
-    def __init__(self, input_shape, num_scale, block_per_scale=1, depth_per_block=2, kernel_size=3, base_dim=16, fc_dim=512, latent_dim=64, second_depth=3, second_dim=1024, cross_entropy_loss=False, device=torch.device("cuda:0")):
+    def __init__(self, input_shape, num_scale, block_per_scale=1, depth_per_block=2, kernel_size=3, base_dim=16, fc_dim=512, latent_dim=64, device=torch.device("cuda:0")):
         super(ResnetEncoder, self).__init__()
         self.num_scale = num_scale
         self.block_per_scale = block_per_scale
         self.depth_per_block = depth_per_block
         self.kernel_size = kernel_size
-        self.base_dim = base_dim
         self.fc_dim = fc_dim
         self.latent_dim = latent_dim
-        self.second_dim = second_dim 
-        self.second_depth = second_depth
-        self.cross_entropy_loss = cross_entropy_loss
         self.device = device
 
         cur_shape = [1, input_shape[1], input_shape[2], input_shape[3]]
@@ -45,7 +41,6 @@ class ResnetEncoder(nn.Module):
 
         self.mu_z_layer = nn.Linear(self.fc_dim, self.latent_dim)
         self.logsd_z_layer = nn.Linear(self.fc_dim, self.latent_dim)
-        
 
     def forward(self, inputs):
         y = self.conv0(inputs)
@@ -68,8 +63,9 @@ class ResnetEncoder(nn.Module):
 
         return mu_z, sd_z, logsd_z, z
 
+
 class ResnetDecoder(nn.Module):
-    def __init__(self, input_shape, num_scale, block_per_scale=1, depth_per_block=2, kernel_size=3, base_dim=16, fc_dim=512, latent_dim=64, second_depth=3, second_dim=1024, cross_entropy_loss=False, device=torch.device("cuda:0")):
+    def __init__(self, input_shape, num_scale, block_per_scale=1, depth_per_block=2, kernel_size=3, base_dim=16, fc_dim=512, latent_dim=64):
         super(ResnetDecoder, self).__init__()
         self.num_scale = num_scale
         self.block_per_scale = block_per_scale
@@ -78,9 +74,6 @@ class ResnetDecoder(nn.Module):
         self.base_dim = base_dim
         self.fc_dim = fc_dim
         self.latent_dim = latent_dim
-        self.second_dim = second_dim 
-        self.second_depth = second_depth
-        self.cross_entropy_loss = cross_entropy_loss
 
         desired_scale = input_shape[2]
         self.scales, dims = [], []
