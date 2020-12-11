@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from model.stage1 import Wae
 from model.stage1 import Resnet
+from model.stage1 import InfoGAN
 from model.stage2.s2vae import *
 from utils.utils_ import save_logfile
 from utils.plot_script import plot_loss
@@ -50,9 +51,14 @@ def main():
     if args.network_structure == 'Resnet':
         encoder1 = Resnet.ResnetEncoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
         decoder1 = Resnet.ResnetDecoder(x, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
-    else:
+    elif args.network_structure == 'Infogan':
+        encoder1 = InfoGAN.InfoGANEncoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
+        decoder1 = InfoGAN.InfoGANDecoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
+    elif args.network_structure == 'Wae':
         encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
+    else:
+        raise "Fuck"
 
     trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
