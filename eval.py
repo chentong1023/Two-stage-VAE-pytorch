@@ -126,7 +126,6 @@ def main():
     plt.imsave(os.path.join(exp_folder, 'gen2_sample.jpg'), img_gens2_sample)
 
     # calculating FID score
-    fid_score_log = 
     
     fid_recon = evaluate_fid_score(
         img_recons.copy(), args.dataset, args.root_folder, True)
@@ -140,8 +139,6 @@ def main():
     print('FID = {:.4f}\n'.format(fid_gen1))
     print('Generation Results (Second Stage):')
     print('FID = {:.4f}\n'.format(fid_gen2))
-    
-    with open()
 
 
 def stich_imgs(x, img_per_row=10, img_per_col=10):

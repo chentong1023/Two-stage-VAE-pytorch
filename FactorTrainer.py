@@ -10,10 +10,10 @@ import time
 from VaeTrainer import VaeTrainer
 
 class FactorTrainer(VaeTrainer):
-	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False, vae_encoder=None):
-		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss=False, vae_encoder=None)
+	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
+		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss, None)
 	
-	def sample_batch1(self):
+	def sample_batch(self):
 		if self.batch_enumerator is None:
 			self.batch_enumerator = enumerate(self.batch_sampler)
 		
@@ -23,22 +23,23 @@ class FactorTrainer(VaeTrainer):
 			self.batch_enumerator = enumerate(self.batch_sampler)
 		# self.real_batch = batch # ?? have not used
 		return batch
-	def sample_batch2(self):
-		if self.batch_enumerator is None:
-			self.batch_enumerator = enumerate(self.batch_sampler)
-		
-		batch_idx, batch = next(self.batch_enumerator)
-		batch = batch.type(torch.float32).to(self.device)
-		_, _, _, batch = self.vae_encoder(batch)
-		
-		if batch_idx == len(self.batch_sampler) - 1:
-			self.batch_enumerator = enumerate(self.batch_sampler)
-		# self.real_batch = batch # ?? have not used
-		return batch
 	
-	def train(self, encoder, decoder, opt_encoder, opt_decoder, sample_true):
+	def permute_dims(z):
+		assert z.dim() == 2
+
+		B, _ = z.size()
+		perm_z = []
+		for z_j in z.split(1, 1):
+			perm = torch.randperm(B).to(z.device)
+			perm_z_j = z_j[perm]
+			perm_z.append(perm_z_j)
+
+		return torch.cat(perm_z, 1)
+	
+	def train(self, encoder, decoder, disc, opt_encoder, opt_decoder, opt_disc, sample_true):
 		opt_encoder.zero_grad()
 		opt_decoder.zero_grad()
+		opt_disc.zero_grad()
 		
 		data = sample_true()
 		data = torch.clone(data).float().detach_().to(self.device)
@@ -47,24 +48,36 @@ class FactorTrainer(VaeTrainer):
 		
 		kld_loss = 0
 		gen_loss = 0
+		shuffle_loss = 0
+		gan_loss = 0
 		
 		mu_z, sd_z, logsd_z, z = encoder(data)
 		x_hat, loggamma_x, gamma_x = decoder(z)
+		z_sh = self.permute_dims(z).detach()
+		x_sh_hat, _, _ = decoder(z_sh)
+		
+		
 		
 		kld_loss += self.kld_loss(mu_z, logsd_z)
 		gen_loss += self.gen_loss(data, x_hat, loggamma_x)
+		gan_loss += -disc(data).mean() + disc(x_sh_hat).mean()
 		
-		log_dict["g_kld_loss"] = kld_loss.item()
-		log_dict["g_gen_loss"] = gen_loss.item()
+		gan_loss.backward(retain_graph=True)
+		opt_disc.step()
 		
-		losses = (kld_loss + gen_loss) / self.args.batch_size
+		shuffle_loss += torch.sum(disc(x_sh_hat))
 		
-		avg_loss = losses.item()
+		losses = (kld_loss + gen_loss - self.args.alpha_gan * shuffle_loss) / self.args.batch_size
+		
 		
 		losses.backward()
 		opt_encoder.step()
 		opt_decoder.step()
 		
+		avg_loss = losses.item()
+		log_dict["g_kld_loss"] = kld_loss.item()
+		log_dict["g_gen_loss"] = gen_loss.item()
+		log_dict["g_gan_loss"] = gen_loss.item()
 		log_dict["g_loss"] = avg_loss
 		
 		return log_dict
@@ -128,6 +141,7 @@ class FactorTrainer(VaeTrainer):
 		while True:
 			encoder.train()
 			decoder.train()
+			discriminator.train()
 			
 			if self.stage == 1:
 				sample_true = self.sample_batch1
@@ -136,8 +150,10 @@ class FactorTrainer(VaeTrainer):
 			gen_log_dict = self.train(
 				encoder,
 				decoder,
+				discriminator,
 				self.opt_encoder,
 				self.opt_decoder,
+				self.opt_disc,
 				sample_true,
 			)
 			

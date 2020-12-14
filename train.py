@@ -131,6 +131,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--is_continue', action="store_true", default=False)
     parser.add_argument('--is_train', action="store_true", default=True)
+    
+    parser.add_argument('--use_shuffled_vae', action="store_true", default=False)
+    parser.add_argument('--alpha_gan', type=float, default=)
 
     args = parser.parse_args()
     print(args)
