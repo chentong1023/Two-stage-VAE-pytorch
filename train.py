@@ -50,8 +50,8 @@ def main():
 
     # model
     if args.network_structure == 'Resnet':
-        encoder1 = Resnet.ResnetEncoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
-        decoder1 = Resnet.ResnetDecoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, args.second_depth, args.second_dim, args.cross_entropy_loss)
+        encoder1 = Resnet.ResnetEncoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim, device)
+        decoder1 = Resnet.ResnetDecoder(x.shape, args.num_scale, args.block_per_scale, args.depth_per_block, args.kernel_size, args.base_dim, args.fc_dim, args.latent_dim)
     elif args.network_structure == 'Infogan':
         encoder1 = InfoGAN.InfoGANEncoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
         decoder1 = InfoGAN.InfoGANDecoder(side_length, side_length, channels, args.latent_dim, args.batch_size)
@@ -59,7 +59,7 @@ def main():
         encoder1 = Wae.WaeEncoder(args.latent_dim, side_length, channels)
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
     else:
-        raise "Fuck"
+        raise Exception("Fuck")
 
     trainer1 = VaeTrainer(args, sampler_x, device, 1)
 
