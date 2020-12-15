@@ -12,6 +12,7 @@ from VaeTrainer import VaeTrainer
 class FactorTrainer(VaeTrainer):
 	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
 		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss, None)
+		self.gen_loss = gen_loss3
 	
 	def sample_batch(self):
 		if self.batch_enumerator is None:
@@ -24,7 +25,7 @@ class FactorTrainer(VaeTrainer):
 		# self.real_batch = batch # ?? have not used
 		return batch
 	
-	def permute_dims(z):
+	def permute_dims(self, z):
 		assert z.dim() == 2
 
 		B, _ = z.size()
@@ -78,6 +79,7 @@ class FactorTrainer(VaeTrainer):
 		log_dict["g_kld_loss"] = kld_loss.item()
 		log_dict["g_gen_loss"] = gen_loss.item()
 		log_dict["g_gan_loss"] = gen_loss.item()
+		log_dict["g_shuffle_loss"] = shuffle_loss.item()
 		log_dict["g_loss"] = avg_loss
 		
 		return log_dict

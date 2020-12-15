@@ -8,6 +8,8 @@ from utils.plot_script import plot_loss
 from VaeTrainer import VaeTrainer
 from torch.utils.data import DataLoader
 from dataset import load_dataset, load_test_dataset
+from FactorTrainer import *
+from model.Discriminator import _netD
 import argparse
 import os
 import numpy as np
@@ -60,10 +62,14 @@ def main():
         decoder1 = Wae.WaeDecoder(args.latent_dim, side_length, channels)
     else:
         raise Exception("Fuck")
-
-    trainer1 = VaeTrainer(args, sampler_x, device, 1)
-
-    logs1 = trainer1.trainIters(encoder1, decoder1)
+    
+    if args.use_shuffled_vae:
+        discriminator = _netD(channels, 128)
+        trainer1 = FactorTrainer(args, sampler_x, device, 1)
+        logs1 = trainer1.trainIters(encoder1, decoder1, discriminator)
+    else:
+        trainer1 = VaeTrainer(args, sampler_x, device, 1)
+        logs1 = trainer1.trainIters(encoder1, decoder1)
     
     print("Stage 1 VAE training has done!")
 
@@ -133,7 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--is_train', action="store_true", default=True)
     
     parser.add_argument('--use_shuffled_vae', action="store_true", default=False)
-    parser.add_argument('--alpha_gan', type=float, default=)
+    parser.add_argument('--alpha_gan', type=float, default=1.)
 
     args = parser.parse_args()
     print(args)
