@@ -133,12 +133,17 @@ def main():
         img_gens1.copy(), args.dataset, args.root_folder, True)
     fid_gen2 = evaluate_fid_score(
         img_gens2.copy(), args.dataset, args.root_folder, True)
-    print('Reconstruction Results:')
-    print('FID = {:.4F}\n'.format(fid_recon))
-    print('Generation Results (First Stage):')
-    print('FID = {:.4f}\n'.format(fid_gen1))
-    print('Generation Results (Second Stage):')
-    print('FID = {:.4f}\n'.format(fid_gen2))
+    
+    fid_path = os.path.join(exp_folder, "fid_log.txt")
+    with open(fid_path, "wt") as f:
+        out_str = 'Reconstruction Results:\n'
+        out_str += 'FID = {:.4F}\n'.format(fid_recon)
+        out_str += 'Generation Results (First Stage):\n'
+        out_str += 'FID = {:.4f}\n'.format(fid_gen1)
+        out_str += 'Generation Results (Second Stage):'
+        out_str += 'FID = {:.4f}\n'.format(fid_gen2)
+        print(out_str)
+        f.write(out_str)
 
 
 def stich_imgs(x, img_per_row=10, img_per_col=10):
