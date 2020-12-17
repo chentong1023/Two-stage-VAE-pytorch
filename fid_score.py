@@ -4,7 +4,7 @@ import os.path, sys, tarfile
 import numpy as np
 from scipy import linalg
 from six.moves import range, urllib
-# import tensorflow as tf
+import tensorflow as tf
 import numpy as np
 import os
 import gzip, pickle
@@ -23,17 +23,17 @@ import cv2 as cv
 
 import matplotlib.pyplot as plt
 
-#
+
 # # =================================================================================
 # # tensorflow fid score
 #
 # def create_inception_graph(pth):
 #     """Creates a graph from saved GraphDef file."""
 #     # Creates graph from saved graph_def.pb.
-#     with tf.gfile.FastGFile(pth, 'rb') as f:
+#     with tf.gfile.FastGFile( pth, 'rb') as f:
 #         graph_def = tf.GraphDef()
-#         graph_def.ParseFromString(f.read())
-#         _ = tf.import_graph_def(graph_def, name='FID_Inception_Net')
+#         graph_def.ParseFromString( f.read())
+#         _ = tf.import_graph_def( graph_def, name='FID_Inception_Net')
 #
 #
 # # code for handling inception net derived from
@@ -47,18 +47,16 @@ import matplotlib.pyplot as plt
 #         for o in op.outputs:
 #             shape = o.get_shape()
 #             if shape._dims != []:
-#                 shape = [s.value for s in shape]
-#                 new_shape = []
-#                 for j, s in enumerate(shape):
-#                     if s == 1 and j == 0:
-#                         new_shape.append(None)
-#                     else:
-#                         new_shape.append(s)
-#                 o.__dict__['_shape_val'] = tf.TensorShape(new_shape)
+#               shape = [s.value for s in shape]
+#               new_shape = []
+#               for j, s in enumerate(shape):
+#                 if s == 1 and j == 0:
+#                   new_shape.append(None)
+#                 else:
+#                   new_shape.append(s)
+#               o.__dict__['_shape_val'] = tf.TensorShape(new_shape)
 #     return pool3
-#
-#
-# # -------------------------------------------------------------------------------
+# #-------------------------------------------------------------------------------
 #
 #
 # def get_activations_tf(images, sess, batch_size=50, verbose=False):
@@ -81,23 +79,22 @@ import matplotlib.pyplot as plt
 #     if batch_size > d0:
 #         print("warning: batch size is bigger than the data size. setting batch size to data size")
 #         batch_size = d0
-#     n_batches = d0 // batch_size
-#     n_used_imgs = n_batches * batch_size
-#     pred_arr = np.empty((n_used_imgs, 2048))
+#     n_batches = d0//batch_size
+#     n_used_imgs = n_batches*batch_size
+#     pred_arr = np.empty((n_used_imgs,2048))
 #     for i in range(n_batches):
 #         if verbose:
-#             print("\rPropagating batch %d/%d" % (i + 1, n_batches), end="", flush=True)
-#         start = i * batch_size
+#             print("\rPropagating batch %d/%d" % (i+1, n_batches), end="", flush=True)
+#         start = i*batch_size
 #         end = start + batch_size
 #         batch = images[start:end]
 #         pred = sess.run(inception_layer, {'FID_Inception_Net/ExpandDims:0': batch})
-#         pred_arr[start:end] = pred.reshape(batch_size, -1)
+#         pred_arr[start:end] = pred.reshape(batch_size,-1)
+#
 #     if verbose:
 #         print(" done")
 #     return pred_arr
-#
-#
-# # -------------------------------------------------------------------------------
+# #-------------------------------------------------------------------------------
 
 
 # =================================================================================
@@ -116,7 +113,7 @@ def preprocess_pt(img):
     for j in range(np.shape(img)[0]):
         temp = transforms.ToPILImage()(img[j])
         output[j] = preprocess(temp).numpy()
-    print(output.shape, 'shape')
+
     return output
 
 
@@ -165,17 +162,15 @@ def get_activations_pt(images, model, batch_size=64, dims=2048,
             batch = batch.cuda()
 
         pred = model(batch)
-
         # If model output is not scalar, apply global spatial average pooling.
         # This happens if you choose a dwimensionality not equal 2048.
         # if pred.shape[2] != 1 or pred.shape[3] != 1:
         #     pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
-        pred = torch.unsqueeze(pred, 0)
-        adapter = torch.nn.AdaptiveAvgPool1d(dims)
-        pred = adapter(pred)
+        # pred=torch.unsqueeze(pred,0)
+        # adapter = torch.nn.AdaptiveAvgPool1d(dims)
+        # pred = adapter(pred)
 
         pred_arr[start:end] = pred.cpu().data.numpy().reshape(batch_size, dims)
-
     if verbose:
         print(' done')
 
@@ -259,7 +254,6 @@ def preprocess_real_images(real_images):
 #     print('tf end...')
 #     return fid_result
 
-
 def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     real_images, _, _ = load_test_dataset(dataset, root_folder)
     np.random.shuffle(real_images)
@@ -273,7 +267,17 @@ def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     torch.hub.set_dir('./hub')
     model = torch.hub.load('pytorch/vision:v0.6.0', 'inception_v3', pretrained=True)
 
-    real_out_pt = get_activations_pt(real_images_pt, model)
-    fake_out_pt = get_activations_pt(fake_images_pt, model)
+    class Identity(torch.nn.Module):
+        def __init__(self):
+            super(Identity, self).__init__()
+
+        def forward(self, x):
+            return x
+
+    model.fc = Identity()
+    if torch.cuda.is_available():
+        model.to('cuda')
+    real_out_pt = get_activations_pt(real_images_pt, model, cuda=torch.cuda.is_available(), batch_size=16)
+    fake_out_pt = get_activations_pt(fake_images_pt, model, cuda=torch.cuda.is_available(), batch_size=16)
     fid_result_pt = fid_score(real_out_pt, fake_out_pt)
     return fid_result_pt
