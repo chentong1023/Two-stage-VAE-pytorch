@@ -17,21 +17,23 @@ import pathlib
 import torch
 from torch.autograd import Variable
 from torch.nn.functional import adaptive_avg_pool2d
-
+from torchvision import transforms
 from dataset import load_test_dataset
+import cv2 as cv
 
 import matplotlib.pyplot as plt
 
+#
 # # =================================================================================
 # # tensorflow fid score
 #
 # def create_inception_graph(pth):
 #     """Creates a graph from saved GraphDef file."""
 #     # Creates graph from saved graph_def.pb.
-#     with tf.gfile.FastGFile( pth, 'rb') as f:
+#     with tf.gfile.FastGFile(pth, 'rb') as f:
 #         graph_def = tf.GraphDef()
-#         graph_def.ParseFromString( f.read())
-#         _ = tf.import_graph_def( graph_def, name='FID_Inception_Net')
+#         graph_def.ParseFromString(f.read())
+#         _ = tf.import_graph_def(graph_def, name='FID_Inception_Net')
 #
 #
 # # code for handling inception net derived from
@@ -45,16 +47,18 @@ import matplotlib.pyplot as plt
 #         for o in op.outputs:
 #             shape = o.get_shape()
 #             if shape._dims != []:
-#               shape = [s.value for s in shape]
-#               new_shape = []
-#               for j, s in enumerate(shape):
-#                 if s == 1 and j == 0:
-#                   new_shape.append(None)
-#                 else:
-#                   new_shape.append(s)
-#               o.__dict__['_shape_val'] = tf.TensorShape(new_shape)
+#                 shape = [s.value for s in shape]
+#                 new_shape = []
+#                 for j, s in enumerate(shape):
+#                     if s == 1 and j == 0:
+#                         new_shape.append(None)
+#                     else:
+#                         new_shape.append(s)
+#                 o.__dict__['_shape_val'] = tf.TensorShape(new_shape)
 #     return pool3
-# #-------------------------------------------------------------------------------
+#
+#
+# # -------------------------------------------------------------------------------
 #
 #
 # def get_activations_tf(images, sess, batch_size=50, verbose=False):
@@ -77,29 +81,49 @@ import matplotlib.pyplot as plt
 #     if batch_size > d0:
 #         print("warning: batch size is bigger than the data size. setting batch size to data size")
 #         batch_size = d0
-#     n_batches = d0//batch_size
-#     n_used_imgs = n_batches*batch_size
-#     pred_arr = np.empty((n_used_imgs,2048))
+#     n_batches = d0 // batch_size
+#     n_used_imgs = n_batches * batch_size
+#     pred_arr = np.empty((n_used_imgs, 2048))
 #     for i in range(n_batches):
 #         if verbose:
-#             print("\rPropagating batch %d/%d" % (i+1, n_batches), end="", flush=True)
-#         start = i*batch_size
+#             print("\rPropagating batch %d/%d" % (i + 1, n_batches), end="", flush=True)
+#         start = i * batch_size
 #         end = start + batch_size
 #         batch = images[start:end]
 #         pred = sess.run(inception_layer, {'FID_Inception_Net/ExpandDims:0': batch})
-#         pred_arr[start:end] = pred.reshape(batch_size,-1)
+#         pred_arr[start:end] = pred.reshape(batch_size, -1)
 #     if verbose:
 #         print(" done")
 #     return pred_arr
-# #-------------------------------------------------------------------------------
 #
+#
+# # -------------------------------------------------------------------------------
+
 
 # =================================================================================
 # pytorch fid score
 
+def preprocess_pt(img):
+    img = torch.from_numpy(img.transpose((0, 3, 1, 2)))
+    img = img.float().div(255)
+    preprocess = transforms.Compose([
+        transforms.Resize(299),
+        transforms.CenterCrop(299),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ])
+    output = np.zeros((np.shape(img)[0], 3, 299, 299), dtype=np.float32)
+    for j in range(np.shape(img)[0]):
+        temp = transforms.ToPILImage()(img[j])
+        output[j] = preprocess(temp).numpy()
+    print(output.shape, 'shape')
+    return output
+
+
 def get_activations_pt(images, model, batch_size=64, dims=2048,
-                    cuda=False, verbose=False):
+                       cuda=False, verbose=False):
     """Calculates the activations of the pool_3 layer for all images.
+
     Params:
     -- images      : Numpy array of dimension (n_images, 3, hi, wi). The values
                      must lie between 0 and 1.
@@ -140,14 +164,17 @@ def get_activations_pt(images, model, batch_size=64, dims=2048,
         if cuda:
             batch = batch.cuda()
 
-        pred = model(batch)[0]
+        pred = model(batch)
 
         # If model output is not scalar, apply global spatial average pooling.
-        # This happens if you choose a dimensionality not equal 2048.
-        if pred.shape[2] != 1 or pred.shape[3] != 1:
-            pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
+        # This happens if you choose a dwimensionality not equal 2048.
+        # if pred.shape[2] != 1 or pred.shape[3] != 1:
+        #     pred = adaptive_avg_pool2d(pred, output_size=(1, 1))
+        pred = torch.unsqueeze(pred, 0)
+        adapter = torch.nn.AdaptiveAvgPool1d(dims)
+        pred = adapter(pred)
 
-        pred_arr[start:end] = pred.cpu().data.numpy().reshape(batch_size, -1)
+        pred_arr[start:end] = pred.cpu().data.numpy().reshape(batch_size, dims)
 
     if verbose:
         print(' done')
@@ -158,7 +185,7 @@ def get_activations_pt(images, model, batch_size=64, dims=2048,
 def fid_score(codes_g, codes_r, eps=1e-6):
     d = codes_g.shape[1]
     assert codes_r.shape[1] == d
-    
+
     mn_g = codes_g.mean(axis=0)
     mn_r = codes_r.mean(axis=0)
 
@@ -168,28 +195,31 @@ def fid_score(codes_g, codes_r, eps=1e-6):
     covmean, _ = linalg.sqrtm(cov_g.dot(cov_r), disp=False)
     if not np.isfinite(covmean).all():
         cov_g[range(d), range(d)] += eps
-        cov_r[range(d), range(d)] += eps 
+        cov_r[range(d), range(d)] += eps
         covmean = linalg.sqrtm(cov_g.dot(cov_r))
 
     score = np.sum((mn_g - mn_r) ** 2) + (np.trace(cov_g) + np.trace(cov_r) - 2 * np.trace(covmean))
-    return score 
+    return score
 
 
 def preprocess_fake_images(fake_images, norm=False):
     if np.shape(fake_images)[-1] == 1:
-        fake_images = np.concatenate([fake_images, fake_images, fake_images], -1) 
+        fake_images = np.concatenate([fake_images, fake_images, fake_images], -1)
 
     print('norm = ', norm)
     if norm:
         for j in range(np.shape(fake_images)[0]):
-            fake_images[j] = (fake_images[j] - np.min(fake_images[j])) / (np.max(fake_images[j] - np.min(fake_images[j])))
+            fake_images[j] = (fake_images[j] - np.min(fake_images[j])) / (
+                np.max(fake_images[j] - np.min(fake_images[j])))
     fake_images *= 255
+    fake_images = fake_images[0:10000]
+
     return fake_images[0:10000]
 
 
 def preprocess_real_images(real_images):
     if np.shape(real_images)[-1] == 1:
-        real_images = np.concatenate([real_images, real_images, real_images], -1) 
+        real_images = np.concatenate([real_images, real_images, real_images], -1)
     real_images = real_images.astype(np.float32)
     return real_images
 
@@ -209,7 +239,7 @@ def preprocess_real_images(real_images):
 #     return str(model_file)
 
 
-# def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
+# def evaluate_fid_score_pf(fake_images, dataset, root_folder, norm=True):
 #     real_images, _, _ = load_test_dataset(dataset, root_folder)
 #     np.random.shuffle(real_images)
 #     real_images = real_images[0:10000]
@@ -226,8 +256,9 @@ def preprocess_real_images(real_images):
 #     real_out = get_activations_tf(real_images, sess)
 #     fake_out = get_activations_tf(fake_images, sess)
 #     fid_result = fid_score(real_out, fake_out)
-#
+#     print('tf end...')
 #     return fid_result
+
 
 def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     real_images, _, _ = load_test_dataset(dataset, root_folder)
@@ -235,12 +266,12 @@ def evaluate_fid_score(fake_images, dataset, root_folder, norm=True):
     real_images = real_images[0:10000]
     real_images = preprocess_real_images(real_images)
     fake_images = preprocess_fake_images(fake_images, norm)
-    
+
+    real_images_pt = preprocess_pt(real_images)
+    fake_images_pt = preprocess_pt(fake_images)
+
     torch.hub.set_dir('./hub')
     model = torch.hub.load('pytorch/vision:v0.6.0', 'inception_v3', pretrained=True)
-
-    real_images_pt = np.transpose(real_images, (0, 3, 1, 2))/256
-    fake_images_pt = np.transpose(fake_images, (0, 3, 1, 2))/256
 
     real_out_pt = get_activations_pt(real_images_pt, model)
     fake_out_pt = get_activations_pt(fake_images_pt, model)
