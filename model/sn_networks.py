@@ -82,7 +82,7 @@ class SNConv2d(conv._ConvNd):
         groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
         bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
     Shape:
-        - Input: :math:`(N, C_{in}, H_{in}, W_{in})`
+        - Input: :math:`(N, C_{in}, H_{in}, W_{in})
         - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
           :math:`H_{out} = floor((H_{in}  + 2 * padding[0] - dilation[0] * (kernel\_size[0] - 1) - 1) / stride[0] + 1)`
           :math:`W_{out} = floor((W_{in}  + 2 * padding[1] - dilation[1] * (kernel\_size[1] - 1) - 1) / stride[1] + 1)`
@@ -104,7 +104,7 @@ class SNConv2d(conv._ConvNd):
         dilation = _pair(dilation)
         super(SNConv2d, self).__init__(
             in_channels, out_channels, kernel_size, stride, padding, dilation,
-            False, _pair(0), groups, bias,padding_mode='same')
+            False, _pair(0), groups, bias, padding_mode='same')
         self.register_buffer('u', torch.Tensor(1, out_channels).normal_())
 
     @property

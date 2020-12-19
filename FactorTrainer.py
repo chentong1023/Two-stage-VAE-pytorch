@@ -139,7 +139,7 @@ class FactorTrainer(VaeTrainer):
 		iter_num = 0
 		logs = OrderedDict()
 		start_time = time.time()
-		
+
 		while True:
 			encoder.train()
 			decoder.train()

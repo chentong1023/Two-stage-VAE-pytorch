@@ -4,7 +4,7 @@ from model.stage1 import Resnet
 from model.stage1 import InfoGAN
 from model.stage2.s2vae import *
 from utils.utils_ import save_logfile
-from utils.plot_script import plot_loss
+from utils.plot_script import plot_loss, plot_factor_variation
 from VaeTrainer import VaeTrainer
 from torch.utils.data import DataLoader
 from dataset import load_dataset, load_test_dataset
@@ -89,10 +89,18 @@ def main():
 
     logs2 = trainer2.trainIters(encoder2, decoder2)
 
+    print("Stage 2 VAE training has done!")
     plot_loss(logs2, os.path.join(
         exp_folder, "loss_curve_2.png"), args.plot_every)
     save_logfile(logs2, os.path.join(exp_folder, "log_stage_2.txt"))
 
+    if args.print_variation:
+        if not (num_sample > args.variation_pic_num >= 0):
+            raise Exception("Picture to be check out of range.")
+    plot_factor_variation(encoder1, decoder1, encoder2, decoder2, x[args.variation_pic_num], args.variation_range,
+                          save_path=os.path.join(exp_folder, "variation_test/stage1"), stage=1)
+    plot_factor_variation(encoder1, decoder1, encoder2, decoder2, x[args.variation_pic_num], args.variation_range,
+                          save_path=os.path.join(exp_folder, "variation_test/stage2"), stage=2)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -141,6 +149,9 @@ if __name__ == '__main__':
     parser.add_argument('--use_shuffled_vae', action="store_true", default=False)
     parser.add_argument('--alpha_gan', type=float, default=1.)
 
+    parser.add_argument('--print_variation', action="store_true", default=False)
+    parser.add_argument('--variation_pic_num', type=int, default=0)
+    parser.add_argument('--variation_range', type=float, default=1.)
     args = parser.parse_args()
     print(args)
 

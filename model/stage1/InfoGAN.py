@@ -67,7 +67,7 @@ class InfoGANDecoder(nn.Module):
 
 	def forward(self, input):
 		x_hat = self.net1(input)
-		x_hat = torch.reshape(x_hat, [self.batch_size, 128, self.g_h // 4, self.g_w // 4])
+		x_hat = torch.reshape(x_hat, [-1, 128, self.g_h // 4, self.g_w // 4])
 		x_hat = self.net2(x_hat)
 		log_gamma_x = self.loggamma
 		gamma_x = torch.exp(log_gamma_x)
