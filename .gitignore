@@ -4,3 +4,5 @@ experiments/
 */__pycache__
 __pycache__/
 scratch/
+enev/
+.idea/
