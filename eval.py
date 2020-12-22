@@ -10,7 +10,6 @@ from scipy.misc import imsave, imresize
 import argparse
 import os
 import numpy as np
-import tensorflow as tf 
 import torch
 import math
 import time
@@ -140,7 +139,7 @@ def main():
         out_str += 'FID = {:.4F}\n'.format(fid_recon)
         out_str += 'Generation Results (First Stage):\n'
         out_str += 'FID = {:.4f}\n'.format(fid_gen1)
-        out_str += 'Generation Results (Second Stage):'
+        out_str += 'Generation Results (Second Stage):\n'
         out_str += 'FID = {:.4f}\n'.format(fid_gen2)
         print(out_str)
         f.write(out_str)
@@ -197,14 +196,5 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
-    gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
-    print(gpus)
-    tf.config.experimental.set_virtual_device_configuration(
-        gpus[args.gpu],
-        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=2048)]
-    )
 
     main()
