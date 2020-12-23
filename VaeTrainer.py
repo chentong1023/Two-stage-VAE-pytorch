@@ -117,9 +117,11 @@ class VaeTrainer(object):
 			decoder.load_state_dict(model_dict["decoder"])
 			self.opt_encoder.load_state_dict(model_dict["opt_encoder"])
 			self.opt_decoder.load_state_dict(model_dict["opt_decoder"])
+			return model_dict
 		
 		if self.args.is_continue and self.args.is_train:
-			load_model("lastest")
+			model_dict = load_model("latest")
+			iter_num = model_dict["iterations"]
 		
 		iter_num = 0
 		logs = OrderedDict()

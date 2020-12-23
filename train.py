@@ -31,6 +31,13 @@ def main():
 
     args.model_path = model_path
 
+    opt_file_name = os.path.join(exp_folder, "opt.txt")
+    with open(opt_file_name, "wt") as opt_file:
+        opt_file.write("------------ Options -------------\n")
+        for k, v in sorted(vars(args).items()):
+            opt_file.write("%s: %s\n" % (str(k), str(v)))
+        opt_file.write("-------------- End ----------------\n")
+
     # dataset
     x, side_length, channels = load_dataset(args.dataset, args.root_folder)
     num_sample = np.shape(x)[0]
@@ -105,7 +112,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--network-structure', type=str, default='Infogan')
     parser.add_argument('--batch-size', type=int, default=64)
-    parser.add_argument('--write-iteration', type=int, default=600)
     parser.add_argument('--latent-dim', type=int, default=64)
 
     parser.add_argument('--second-dim', type=int, default=1024)
@@ -120,13 +126,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--epochs', type=int, default=400)
     parser.add_argument('--lr', type=float, default=0.0002)
-    parser.add_argument('--lr-epochs', type=int, default=150)
-    parser.add_argument('--lr-fac', type=float, default=0.5)
-
-    parser.add_argument('--epochs2', type=int, default=800)
-    parser.add_argument('--lr2', type=float, default=0.0001)
-    parser.add_argument('--lr-epochs2', type=int, default=300)
-    parser.add_argument('--lr-fac2', type=float, default=0.5)
     parser.add_argument('--cross-entropy-loss',
                         default=False, action='store_true')
 
@@ -139,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--is_train', action="store_true", default=True)
     
     parser.add_argument('--use_shuffled_vae', action="store_true", default=False)
-    parser.add_argument('--alpha_gan', type=float, default=1.)
+    parser.add_argument('--alpha_gan', type=float, default=1)
 
     args = parser.parse_args()
     print(args)

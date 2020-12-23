@@ -4,11 +4,9 @@ import os.path, sys, tarfile
 import numpy as np
 from scipy import linalg
 from six.moves import range, urllib
-import tensorflow as tf
 import numpy as np
 import os
 import gzip, pickle
-import tensorflow as tf
 from scipy.misc import imread
 import urllib
 
@@ -19,7 +17,6 @@ from torch.autograd import Variable
 from torch.nn.functional import adaptive_avg_pool2d
 from torchvision import transforms
 from dataset import load_test_dataset
-import cv2 as cv
 
 import matplotlib.pyplot as plt
 

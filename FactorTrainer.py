@@ -12,7 +12,7 @@ from VaeTrainer import VaeTrainer
 class FactorTrainer(VaeTrainer):
 	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
 		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss, None)
-		self.gen_loss = gen_loss3
+		# self.gen_loss = gen_loss3
 	
 	def sample_batch(self):
 		if self.batch_enumerator is None:
@@ -42,8 +42,8 @@ class FactorTrainer(VaeTrainer):
 		opt_decoder.zero_grad()
 		opt_disc.zero_grad()
 		
-		data = sample_true()
-		data = torch.clone(data).float().detach_().to(self.device)
+		data1 = sample_true()
+		data1 = torch.clone(data1).float().detach_().to(self.device)
 		
 		log_dict = OrderedDict({"g_loss": 0})
 		
@@ -52,21 +52,26 @@ class FactorTrainer(VaeTrainer):
 		shuffle_loss = 0
 		gan_loss = 0
 		
-		mu_z, sd_z, logsd_z, z = encoder(data)
+		mu_z, sd_z, logsd_z, z = encoder(data1)
+		z_sh = self.permute_dims(z).detach()
+		x_sh_hat, _, _ = decoder(z_sh)
+		x_sh_hat = x_sh_hat.detach()
+		
+		gan_loss += -disc(data1).mean() + disc(x_sh_hat).mean()
+		
+		gan_loss.backward(retain_graph=True)
+		opt_disc.step()
+		data2 = sample_true()
+		data2 = torch.clone(data2).float().detach_().to(self.device)
+
+		mu_z, sd_z, logsd_z, z = encoder(data2)
 		x_hat, loggamma_x, gamma_x = decoder(z)
 		z_sh = self.permute_dims(z).detach()
 		x_sh_hat, _, _ = decoder(z_sh)
 		
-		
-		
 		kld_loss += self.kld_loss(mu_z, logsd_z)
-		gen_loss += self.gen_loss(data, x_hat, loggamma_x)
-		gan_loss += -disc(data).mean() + disc(x_sh_hat).mean()
-		
-		gan_loss.backward(retain_graph=True)
-		opt_disc.step()
-		
-		shuffle_loss += torch.sum(disc(x_sh_hat))
+		gen_loss += self.gen_loss(data2, x_hat, loggamma_x)
+		shuffle_loss += disc(x_sh_hat).sum()
 		
 		losses = (kld_loss + gen_loss - self.args.alpha_gan * shuffle_loss) / self.args.batch_size
 		
@@ -78,7 +83,7 @@ class FactorTrainer(VaeTrainer):
 		avg_loss = losses.item()
 		log_dict["g_kld_loss"] = kld_loss.item()
 		log_dict["g_gen_loss"] = gen_loss.item()
-		log_dict["g_gan_loss"] = gen_loss.item()
+		log_dict["g_gan_loss"] = gan_loss.item()
 		log_dict["g_shuffle_loss"] = shuffle_loss.item()
 		log_dict["g_loss"] = avg_loss
 		
@@ -128,13 +133,15 @@ class FactorTrainer(VaeTrainer):
 			
 			encoder.load_state_dict(model_dict["encoder"])
 			decoder.load_state_dict(model_dict["decoder"])
-			discriminator.load_state_dict(model_dict["decoder"])
+			discriminator.load_state_dict(model_dict["discriminator"])
 			self.opt_encoder.load_state_dict(model_dict["opt_encoder"])
 			self.opt_decoder.load_state_dict(model_dict["opt_decoder"])
 			self.opt_disc.load_state_dict(model_dict["opt_discriminator"])
+			return model_dict
 		
 		if self.args.is_continue:
-			load_model("lastest")
+			model_dict = load_model("latest")
+			iter_num = model_dict["iterations"]
 		
 		iter_num = 0
 		logs = OrderedDict()
