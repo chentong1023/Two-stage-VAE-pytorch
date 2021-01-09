@@ -15,5 +15,5 @@ def gen_loss2(x, x_hat, loggamma_x):
 	return gen.sum()
 
 def gen_loss3(x, x_hat, loggamma_x):
-	mse = torch.nn.MSELoss()
-	return mse(x, x_hat)
+	gen = torch.pow((x - x_hat), 2) / 2.0
+	return gen.sum()

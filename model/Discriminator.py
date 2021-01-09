@@ -34,11 +34,11 @@ class _netD(nn.Module):
             SNConv2d(ndf * 8, 1, 4, 1, 0, bias=False),
             nn.Sigmoid()
         )
-        #self.snlinear = nn.Sequential(SNLinear(ndf * 4 * 4 * 4, 1),
-        #                              nn.Sigmoid())
+        # self.snlinear = nn.Sequential(nn.Linear(ndf * 4 * 4 * 4, 1),
+        #                               nn.Sigmoid())
 
     def forward(self, input):
         output = self.main(input)
-        #output = output.view(output.size(0), -1)
-        #output = self.snlinear(output)
+        # output = output.view(output.size(0), -1)
+        # output = self.snlinear(output)
         return output.view(-1, 1).squeeze(1)

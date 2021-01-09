@@ -12,7 +12,8 @@ from VaeTrainer import VaeTrainer
 class FactorTrainer(VaeTrainer):
 	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
 		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss, None)
-		# self.gen_loss = gen_loss3
+		self.gen_loss = gen_loss3
+		self.dis_cri = torch.nn.BCELoss()
 	
 	def sample_batch(self):
 		if self.batch_enumerator is None:
@@ -57,34 +58,54 @@ class FactorTrainer(VaeTrainer):
 		x_sh_hat, _, _ = decoder(z_sh)
 		x_sh_hat = x_sh_hat.detach()
 		
-		gan_loss += -disc(data1).mean() + disc(x_sh_hat).mean()
+		disc_gt = disc(data1)
+		labelv = torch.FloatTensor(self.args.batch_size).to(self.device)
+		labelv.resize_(self.args.batch_size).fill_(1)
+		errD_real = self.dis_cri(disc_gt, labelv)
+		
+		disc_fake = disc(x_sh_hat)
+		labelv = torch.FloatTensor(self.args.batch_size).to(self.device)
+		labelv.resize_(self.args.batch_size).fill_(0)
+		errD_fake = self.dis_cri(disc_fake, labelv)
+		
+		gan_loss += -errD_real + errD_fake
 		
 		gan_loss.backward(retain_graph=True)
 		opt_disc.step()
-		data2 = sample_true()
-		data2 = torch.clone(data2).float().detach_().to(self.device)
+		data1 = sample_true()
+		data1 = torch.clone(data1).float().detach_().to(self.device)
 
-		mu_z, sd_z, logsd_z, z = encoder(data2)
+		mu_z, sd_z, logsd_z, z = encoder(data1)
 		x_hat, loggamma_x, gamma_x = decoder(z)
 		z_sh = self.permute_dims(z).detach()
 		x_sh_hat, _, _ = decoder(z_sh)
 		
-		kld_loss += self.kld_loss(mu_z, logsd_z)
-		gen_loss += self.gen_loss(data2, x_hat, loggamma_x)
-		shuffle_loss += disc(x_sh_hat).sum()
+		# print(self.args.batch_size)
+		kld_loss += self.kld_loss(mu_z, logsd_z)  
+		gen_loss += self.gen_loss(data1, x_hat, loggamma_x)
 		
-		losses = (kld_loss + gen_loss - self.args.alpha_gan * shuffle_loss) / self.args.batch_size
+		x_sh_hat = x_sh_hat.detach()
+		disc_fake = disc(x_sh_hat)
+		labelv = torch.FloatTensor(self.args.batch_size).to(self.device)
+		labelv.resize_(self.args.batch_size).fill_(0)
+		shuffle_loss += self.dis_cri(disc_fake, labelv)
 		
+		# disc_real = disc(data1)
+		# labelv = torch.FloatTensor(self.args.batch_size).to(self.device)
+		# labelv.resize_(self.args.batch_size).fill_(1)
+		# temp_loss = self.dis_cri(disc_fake, labelv)
 		
+		losses = (kld_loss + gen_loss) / self.args.batch_size - self.args.alpha_gan * shuffle_loss
 		losses.backward()
 		opt_encoder.step()
 		opt_decoder.step()
-		
+		opt_disc.step()
+
 		avg_loss = losses.item()
 		log_dict["g_kld_loss"] = kld_loss.item()
 		log_dict["g_gen_loss"] = gen_loss.item()
 		log_dict["g_gan_loss"] = gan_loss.item()
-		log_dict["g_shuffle_loss"] = shuffle_loss.item()
+		log_dict["g_shuffle_loss"] = shuffle_loss.item() * 1000000000
 		log_dict["g_loss"] = avg_loss
 		
 		return log_dict
@@ -156,6 +177,7 @@ class FactorTrainer(VaeTrainer):
 				sample_true = self.sample_batch1
 			else:
 				sample_true = self.sample_batch2
+
 			gen_log_dict = self.train(
 				encoder,
 				decoder,
@@ -163,7 +185,7 @@ class FactorTrainer(VaeTrainer):
 				self.opt_encoder,
 				self.opt_decoder,
 				self.opt_disc,
-				sample_true,
+				sample_true
 			)
 			
 			for k, v in gen_log_dict.items():
