@@ -119,13 +119,14 @@ class VaeTrainer(object):
 			self.opt_decoder.load_state_dict(model_dict["opt_decoder"])
 			return model_dict
 		
-		if self.args.is_continue and self.args.is_train:
-			model_dict = load_model("latest")
-			iter_num = model_dict["iterations"]
-		
 		iter_num = 0
 		logs = OrderedDict()
 		start_time = time.time()
+		last_time = start_time
+		
+		if self.args.is_continue and self.args.is_train:
+			model_dict = load_model("latest")
+			iter_num = model_dict["iterations"]
 		
 		while True:
 			encoder.train()
@@ -157,7 +158,9 @@ class VaeTrainer(object):
 					mean_loss[k] = (
 						sum(logs[k][-1 * self.args.print_every:]) / self.args.print_every
 					)
-				print_current_loss(start_time, iter_num, self.args.epochs, mean_loss)
+				current_time = time.time()
+				print_current_loss(start_time, last_time, current_time, self.args.print_every, iter_num, self.args.epochs, mean_loss)
+				last_time = current_time
 			
 			if iter_num % self.args.save_every == 0:
 				save_model(str(iter_num))

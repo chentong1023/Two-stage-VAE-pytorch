@@ -12,7 +12,6 @@ from VaeTrainer import VaeTrainer
 class FactorTrainer(VaeTrainer):
 	def __init__(self, args, batch_sampler, device, stage, cross_entropy_loss=False):
 		super(FactorTrainer, self).__init__(args, batch_sampler, device, stage, cross_entropy_loss, None)
-		self.gen_loss = gen_loss3
 		self.dis_cri = torch.nn.BCELoss()
 	
 	def sample_batch(self):
@@ -68,9 +67,9 @@ class FactorTrainer(VaeTrainer):
 		labelv.resize_(self.args.batch_size).fill_(0)
 		errD_fake = self.dis_cri(disc_fake, labelv)
 		
-		gan_loss += -errD_real + errD_fake
+		gan_loss += errD_real + errD_fake
 		
-		gan_loss.backward(retain_graph=True)
+		gan_loss.backward()
 		opt_disc.step()
 		data1 = sample_true()
 		data1 = torch.clone(data1).float().detach_().to(self.device)
@@ -90,12 +89,7 @@ class FactorTrainer(VaeTrainer):
 		labelv.resize_(self.args.batch_size).fill_(0)
 		shuffle_loss += self.dis_cri(disc_fake, labelv)
 		
-		# disc_real = disc(data1)
-		# labelv = torch.FloatTensor(self.args.batch_size).to(self.device)
-		# labelv.resize_(self.args.batch_size).fill_(1)
-		# temp_loss = self.dis_cri(disc_fake, labelv)
-		
-		losses = (kld_loss + gen_loss) / self.args.batch_size - self.args.alpha_gan * shuffle_loss
+		losses = (kld_loss + gen_loss) / self.args.batch_size + self.args.alpha_gan * shuffle_loss
 		losses.backward()
 		opt_encoder.step()
 		opt_decoder.step()
@@ -105,7 +99,7 @@ class FactorTrainer(VaeTrainer):
 		log_dict["g_kld_loss"] = kld_loss.item()
 		log_dict["g_gen_loss"] = gen_loss.item()
 		log_dict["g_gan_loss"] = gan_loss.item()
-		log_dict["g_shuffle_loss"] = shuffle_loss.item() * 1000000000
+		log_dict["g_shuffle_loss"] = shuffle_loss.item()
 		log_dict["g_loss"] = avg_loss
 		
 		return log_dict
@@ -160,13 +154,14 @@ class FactorTrainer(VaeTrainer):
 			self.opt_disc.load_state_dict(model_dict["opt_discriminator"])
 			return model_dict
 		
-		if self.args.is_continue:
-			model_dict = load_model("latest")
-			iter_num = model_dict["iterations"]
-		
 		iter_num = 0
 		logs = OrderedDict()
 		start_time = time.time()
+		last_time = start_time
+		
+		if self.args.is_continue:
+			model_dict = load_model("latest")
+			iter_num = model_dict["iterations"]
 		
 		while True:
 			encoder.train()
@@ -202,7 +197,9 @@ class FactorTrainer(VaeTrainer):
 					mean_loss[k] = (
 						sum(logs[k][-1 * self.args.print_every:]) / self.args.print_every
 					)
-				print_current_loss(start_time, iter_num, self.args.epochs, mean_loss)
+				current_time = time.time()
+				print_current_loss(start_time, last_time, current_time, self.args.print_every, iter_num, self.args.epochs, mean_loss)
+				last_time = current_time
 			
 			if iter_num % self.args.save_every == 0:
 				save_model(str(iter_num))

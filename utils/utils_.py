@@ -12,6 +12,9 @@ def save_logfile(log_loss, save_path):
 
 def print_current_loss(
     start_time,
+    last_time,
+    current_time,
+    print_every,
     niter_state,
     total_niters,
     losses,
@@ -24,17 +27,16 @@ def print_current_loss(
         s -= m * 60
         return "%dm %ds" % (m, s)
 
-    def time_since(since, percent):
-        now = time.time()
+    def time_since(since, last, now, print_every):
         s = now - since
-        es = s / percent
+        es = (now - last) / percent
         rs = es - s
         return "%s (- %s)" % (as_minutes(s), as_minutes(rs))
 
     if epoch is not None:
         print("epoch: %2d inner_iter: %3d" % (epoch, inner_iter), end=" ")
     message = "%s niter: %d completed: %3d%%)" % (
-        time_since(start_time, niter_state / total_niters),
+        time_since(start_time, last_time, current_time, print_every / total_niters),
         niter_state,
         niter_state / total_niters * 100,
     )

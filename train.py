@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from dataset import load_dataset, load_test_dataset
 from FactorTrainer import *
 from model.Discriminator import _netD
+from model.ResDiscriminator import SNResDiscriminator
 import argparse
 import os
 import numpy as np
@@ -71,7 +72,10 @@ def main():
         raise Exception("Fuck")
     
     if args.use_shuffled_vae:
-        discriminator = _netD(channels, 128)
+        if args.dataset != 'cifar10':
+            discriminator = SNResDiscriminator(64, 4)
+        else:
+            discriminator = _netD(channels, 128)
         trainer1 = FactorTrainer(args, sampler_x, device, 1)
         logs1 = trainer1.trainIters(encoder1, decoder1, discriminator)
     else:
