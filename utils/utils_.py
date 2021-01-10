@@ -27,7 +27,7 @@ def print_current_loss(
         s -= m * 60
         return "%dm %ds" % (m, s)
 
-    def time_since(since, last, now, print_every):
+    def time_since(since, last, now, percent):
         s = now - since
         es = (now - last) / percent
         rs = es - s
