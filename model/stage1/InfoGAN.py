@@ -63,12 +63,13 @@ class InfoGANDecoder(nn.Module):
 			nn.ConvTranspose2d(64, channels, kernel_size=4, stride=2, padding=1),
 			nn.Sigmoid()
 		)
-		self.loggamma = nn.parameter.Parameter(torch.zeros([channels, g_h, g_w]), requires_grad=True)
+
+		self.log_gamma_x = nn.parameter.Parameter(torch.zeros(size=x_hat.shape, dtype=torch.float32), requires_grad=True)
 
 	def forward(self, input):
 		x_hat = self.net1(input)
 		x_hat = torch.reshape(x_hat, [self.batch_size, 128, self.g_h // 4, self.g_w // 4])
 		x_hat = self.net2(x_hat)
-		log_gamma_x = self.loggamma
+		log_gamma_x = self.log_gamma_x
 		gamma_x = torch.exp(log_gamma_x)
 		return x_hat, log_gamma_x, gamma_x
